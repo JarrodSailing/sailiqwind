@@ -34,6 +34,6 @@ class BleManager {
     return _ble.subscribeToCharacteristic(characteristic);
   }
 
-  // ✅ NEW: expose _ble for direct access
+  // ✅ Expose _ble safely
   FlutterReactiveBle get ble => _ble;
 }

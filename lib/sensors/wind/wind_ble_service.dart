@@ -26,8 +26,10 @@ class WindBleService {
         final connectionStream = bleManager.connectToDevice(result.id);
         await for (var update in connectionStream) {
           if (update.connectionState == DeviceConnectionState.connected) {
-            // 🔧 Stabilizer patch applied here:
-            await Future.delayed(const Duration(seconds: 3));
+
+            // ✅ Added stabilizer delay here:
+            await Future.delayed(const Duration(seconds: 2));
+
             await _subscribeToWindData();
             break;
           }
@@ -40,21 +42,24 @@ class WindBleService {
   Future<void> _subscribeToWindData() async {
     if (_connectedDeviceId == null) return;
 
-    final characteristic = QualifiedCharacteristic(
+    final dataStream = bleManager.subscribeToCharacteristic(
       deviceId: _connectedDeviceId!,
-      serviceId: Uuid.parse(BleConstants.serviceUuid),
-      characteristicId: Uuid.parse(BleConstants.readCharUuid),
+      serviceUuid: BleConstants.serviceUuid,
+      characteristicUuid: BleConstants.readCharUuid,
     );
 
-    final dataStream = bleManager.ble.subscribeToCharacteristic(characteristic);
-
     dataStream.listen((data) {
-      final rawString = utf8.decode(data);
+      final rawString = asciiDecoder(data);
+      print('[BLE] Incoming data: $rawString');
       final windData = WindPacketParser.parse(rawString);
       if (windData != null) {
         _windDataController.add(windData);
       }
     });
+  }
+
+  String asciiDecoder(List<int> data) {
+    return data.map((b) => String.fromCharCode(b)).join();
   }
 
   Future<void> disconnect() async {

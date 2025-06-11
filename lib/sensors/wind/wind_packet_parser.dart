@@ -7,37 +7,32 @@ class WindPacketParser {
     try {
       if (!rawData.startsWith(':')) return null;
 
-      rawData = rawData.trim().substring(1);
-      List<int> bytes = _asciiHexToBytes(rawData);
+      // Strip off the starting ':' and trim trailing whitespace
+      rawData = rawData.substring(1).trim();
 
-      int index = 4;
+      // Split CSV parts
+      List<String> fields = rawData.split(',');
 
-      int windDirectionRaw = (bytes[index] << 8) | bytes[index + 1];
-      index += 2;
+      if (fields.length < 3) return null;
 
-      List<int> windSpeedBytes = bytes.sublist(index, index + 4).reversed.toList();
-      double windSpeed = ByteData.sublistView(Uint8List.fromList(windSpeedBytes)).getFloat32(0, Endian.big);
-      index += 4;
+      // Parse fields safely
+      double? windDir = double.tryParse(fields[1]);  // 2nd field
+      double? windSpeed = double.tryParse(fields[2]);  // 3rd field
 
+      if (windDir == null || windSpeed == null) return null;
+
+      // Convert m/s to knots
       double awsKnots = windSpeed * 1.94384;
 
       return WindData(
-        awa: windDirectionRaw.toDouble(),
+        awa: windDir,
         aws: awsKnots,
         twa: 0,
         tws: 0,
       );
     } catch (e) {
+      print('[Parser Error]: $e');
       return null;
     }
-  }
-
-  static List<int> _asciiHexToBytes(String hexStr) {
-    List<int> result = [];
-    for (int i = 0; i < hexStr.length; i += 2) {
-      String byteStr = hexStr.substring(i, i + 2);
-      result.add(int.parse(byteStr, radix: 16));
-    }
-    return result;
   }
 }

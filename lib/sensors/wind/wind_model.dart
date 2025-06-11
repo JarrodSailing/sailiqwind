@@ -1,8 +1,8 @@
 class WindData {
-  final double awa; // Apparent Wind Angle (°)
-  final double aws; // Apparent Wind Speed (knots)
-  final double twa; // True Wind Angle (°)
-  final double tws; // True Wind Speed (knots)
+  final double awa;
+  final double aws;
+  final double twa;
+  final double tws;
 
   WindData({
     required this.awa,

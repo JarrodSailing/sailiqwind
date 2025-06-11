@@ -1,13 +1,12 @@
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
-import '../../sensors/wind/ble_constants.dart';
 
 class BleManager {
   final FlutterReactiveBle _ble = FlutterReactiveBle();
 
-  // Start BLE scan as stream
+  // Scan with no filtering to avoid discovery failures
   Stream<DiscoveredDevice> scanForDevices() {
     return _ble.scanForDevices(
-      withServices: BleConstants.supportedServiceUuids.map((uuid) => Uuid.parse(uuid)).toList(),
+      withServices: [],  // ← No service filtering
       scanMode: ScanMode.lowLatency,
     );
   }
@@ -20,19 +19,21 @@ class BleManager {
     );
   }
 
-  // Read services after connection
-  Future<List<DiscoveredService>> discoverServices(String deviceId) async {
-    return await _ble.discoverServices(deviceId);
+  // Subscribe directly to characteristic
+  Stream<List<int>> subscribeToCharacteristic({
+    required String deviceId,
+    required String serviceUuid,
+    required String characteristicUuid,
+  }) {
+    final characteristic = QualifiedCharacteristic(
+      deviceId: deviceId,
+      serviceId: Uuid.parse(serviceUuid),
+      characteristicId: Uuid.parse(characteristicUuid),
+    );
+
+    return _ble.subscribeToCharacteristic(characteristic);
   }
 
-  // Subscribe to characteristic notifications (string-based version only)
-  Stream<List<int>> subscribeToCharacteristic(String deviceId, String serviceUuid, String characteristicUuid) {
-    return _ble.subscribeToCharacteristic(
-      QualifiedCharacteristic(
-        serviceId: Uuid.parse(serviceUuid),
-        characteristicId: Uuid.parse(characteristicUuid),
-        deviceId: deviceId,
-      ),
-    );
-  }
+  // ✅ NEW: expose _ble for direct access
+  FlutterReactiveBle get ble => _ble;
 }

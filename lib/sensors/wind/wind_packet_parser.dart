@@ -1,31 +1,43 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'wind_model.dart';
 
 class WindPacketParser {
-  // Parse raw BLE CSV string into WindData
   static WindData? parse(String rawData) {
     try {
-      final parts = rawData.split(',');
+      if (!rawData.startsWith(':')) return null;
 
-      // Validate expected packet structure (at least enough fields present)
-      if (parts.length < 3) {
-        return null;
-      }
+      rawData = rawData.trim().substring(1);
+      List<int> bytes = _asciiHexToBytes(rawData);
 
-      // Extract AWS and AWA from appropriate fields
-      // Right now we're just taking safe placeholders for AWS and AWA:
-      // Update the indexes based on your actual packet spec later if needed
-      final awa = double.tryParse(parts[1]) ?? 0.0;
-      final aws = double.tryParse(parts[2]) ?? 0.0;
+      int index = 4;
+
+      int windDirectionRaw = (bytes[index] << 8) | bytes[index + 1];
+      index += 2;
+
+      List<int> windSpeedBytes = bytes.sublist(index, index + 4).reversed.toList();
+      double windSpeed = ByteData.sublistView(Uint8List.fromList(windSpeedBytes)).getFloat32(0, Endian.big);
+      index += 4;
+
+      double awsKnots = windSpeed * 1.94384;
 
       return WindData(
-        awa: awa,
-        aws: aws,
-        twa: 0.0, // placeholder
-        tws: 0.0, // placeholder
+        awa: windDirectionRaw.toDouble(),
+        aws: awsKnots,
+        twa: 0,
+        tws: 0,
       );
     } catch (e) {
-      // Parsing failed
       return null;
     }
+  }
+
+  static List<int> _asciiHexToBytes(String hexStr) {
+    List<int> result = [];
+    for (int i = 0; i < hexStr.length; i += 2) {
+      String byteStr = hexStr.substring(i, i + 2);
+      result.add(int.parse(byteStr, radix: 16));
+    }
+    return result;
   }
 }

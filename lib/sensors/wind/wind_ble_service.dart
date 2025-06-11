@@ -12,23 +12,22 @@ class WindBleService {
   WindBleService({required this.bleManager});
 
   String? _connectedDeviceId;
-  StreamController<WindData> _windDataController = StreamController.broadcast();
+  final StreamController<WindData> _windDataController = StreamController.broadcast();
 
   Stream<WindData> get dataStream => _windDataController.stream;
 
   Future<void> connect() async {
-    // Scan for devices
     final scanStream = bleManager.scanForDevices();
 
     await for (var result in scanStream) {
-      if (result.name == 'HB-WS25092') {
+      if (result.name == BleConstants.deviceName) {
         _connectedDeviceId = result.id;
 
-        // Establish connection (stream-based)
         final connectionStream = bleManager.connectToDevice(result.id);
-
         await for (var update in connectionStream) {
           if (update.connectionState == DeviceConnectionState.connected) {
+            // 🔧 Stabilizer patch applied here:
+            await Future.delayed(const Duration(seconds: 3));
             await _subscribeToWindData();
             break;
           }
@@ -41,17 +40,13 @@ class WindBleService {
   Future<void> _subscribeToWindData() async {
     if (_connectedDeviceId == null) return;
 
-    // Insert controlled delay before subscribing
-    await Future.delayed(const Duration(seconds: 3));
-
-    final serviceUuid = BleConstants.serviceUuid;
-    final characteristicUuid = BleConstants.readCharUuid;
-
-    final dataStream = bleManager.subscribeToCharacteristic(
-      _connectedDeviceId!,
-      serviceUuid,
-      characteristicUuid,
+    final characteristic = QualifiedCharacteristic(
+      deviceId: _connectedDeviceId!,
+      serviceId: Uuid.parse(BleConstants.serviceUuid),
+      characteristicId: Uuid.parse(BleConstants.readCharUuid),
     );
+
+    final dataStream = bleManager.ble.subscribeToCharacteristic(characteristic);
 
     dataStream.listen((data) {
       final rawString = utf8.decode(data);

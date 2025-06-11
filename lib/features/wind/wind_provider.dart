@@ -1,19 +1,25 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../sensors/wind/wind_service.dart';
-import '../../sensors/wind/wind_model.dart';
 import '../../sensors/wind/wind_ble_service.dart';
+import '../../sensors/wind/wind_model.dart';
+import '../../core/ble/ble_manager.dart';
+import 'dart:async';
 
-// Provide WindBleService instance
-final windBleServiceProvider = Provider<WindBleService>((ref) => WindBleService());
+/// Provide a single instance of BleManager
+final bleManagerProvider = Provider<BleManager>((ref) => BleManager());
 
-// Provide WindService instance with BLE injected
-final windServiceProvider = Provider<WindService>((ref) {
-  final bleService = ref.watch(windBleServiceProvider);
-  return WindService(bleService: bleService);
-});
+/// Provide a single instance of WindBleService using BleManager
+final windBleServiceProvider = Provider<WindBleService>(
+  (ref) => WindBleService(bleManager: ref.read(bleManagerProvider)),
+);
 
-// Stream provider exposing the WindData stream (still using mock stream)
-final windDataProvider = StreamProvider<WindData>((ref) {
-  final service = ref.watch(windServiceProvider);
-  return service.dataStream;
+/// Provide a single instance of WindService using WindBleService
+final windServiceProvider = Provider<WindService>(
+  (ref) => WindService(bleService: ref.read(windBleServiceProvider)),
+);
+
+/// Stream wind data and expose via FutureProvider
+final windProvider = StreamProvider<WindData>((ref) {
+  final windService = ref.read(windServiceProvider);
+  return windService.dataStream;
 });

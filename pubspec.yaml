@@ -10,9 +10,26 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
+  flutter_reactive_ble:
+    git:
+      url: https://github.com/PhilipsHue/flutter_reactive_ble.git
+      path: packages/flutter_reactive_ble
+      ref: master
+  permission_handler: ^11.3.1
   flutter_riverpod: ^2.4.5
   cupertino_icons: ^1.0.6
+
+dependency_overrides:
+  reactive_ble_platform_interface:
+    git:
+       url: https://github.com/PhilipsHue/flutter_reactive_ble.git
+       path: packages/reactive_ble_platform_interface
+       ref: master
+  reactive_ble_mobile:
+     git:
+       url: https://github.com/PhilipsHue/flutter_reactive_ble.git
+       path: packages/reactive_ble_mobile
+       ref: master
 
 dev_dependencies:
   flutter_test:

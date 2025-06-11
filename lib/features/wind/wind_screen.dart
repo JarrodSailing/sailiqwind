@@ -1,31 +1,82 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'wind_provider.dart';
+import '../../core/permissions/permissions_service.dart';
+import '../wind/wind_provider.dart';
+import '../../sensors/wind/wind_model.dart';
 
-class WindScreen extends ConsumerWidget {
-  const WindScreen({super.key});
+class WindScreen extends ConsumerStatefulWidget {
+  const WindScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final windAsync = ref.watch(windDataProvider);
+  ConsumerState<WindScreen> createState() => _WindScreenState();
+}
+
+class _WindScreenState extends ConsumerState<WindScreen> {
+  bool _isLoading = true;
+  String _error = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeBle();
+  }
+
+  Future<void> _initializeBle() async {
+    try {
+      final permissionService = PermissionsService();
+      final granted = await permissionService.requestBlePermissions();
+
+      if (!granted) {
+        setState(() {
+          _error = "BLE permissions denied.";
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final windService = ref.read(windServiceProvider);
+      await windService.connect();
+
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = "BLE init failed: $e";
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final windData = ref.watch(windProvider);
+
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_error.isNotEmpty) {
+      return Scaffold(
+        body: Center(child: Text(_error)),
+      );
+    }
 
     return Scaffold(
-      appBar: AppBar(title: const Text("SailIQWind")),
+      appBar: AppBar(title: const Text("Wind Sensor")),
       body: Center(
-        child: windAsync.when(
-          data: (windData) {
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text("AWS: ${windData.aws.toStringAsFixed(1)} knots"),
-                Text("AWA: ${windData.awa.toStringAsFixed(1)}°"),
-                Text("TWS: ${windData.tws.toStringAsFixed(1)} knots"),
-                Text("TWA: ${windData.twa.toStringAsFixed(1)}°"),
-              ],
-            );
-          },
+        child: windData.when(
+          data: (data) => Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text("AWS: ${data.aws.toStringAsFixed(1)} knots"),
+              Text("AWA: ${data.awa.toStringAsFixed(1)}°"),
+            ],
+          ),
           loading: () => const CircularProgressIndicator(),
-          error: (err, stack) => Text("Error: $err"),
+          error: (e, _) => Text("Error: $e"),
         ),
       ),
     );

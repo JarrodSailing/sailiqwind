@@ -66,13 +66,26 @@ class _WindScreenState extends ConsumerState<WindScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text("Wind Sensor")),
-      body: Center(
+      body: Center(  // SAFE FIX: keep state wiring stable
         child: windData.when(
           data: (data) => Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text("AWS: ${data.aws.toStringAsFixed(1)} knots"),
-              Text("AWA: ${data.awa.toStringAsFixed(1)}°"),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    "${data.aws.toStringAsFixed(1)} kn",
+                    style: const TextStyle(fontSize: 80, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    "${data.awa.toStringAsFixed(0)}°",
+                    style: const TextStyle(fontSize: 80, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
             ],
           ),
           loading: () => const CircularProgressIndicator(),

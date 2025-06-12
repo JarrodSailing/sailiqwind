@@ -14,6 +14,7 @@ class WindScreen extends ConsumerStatefulWidget {
 class _WindScreenState extends ConsumerState<WindScreen> {
   bool _isLoading = true;
   String _error = '';
+  Stream<WindData>? _windDataStream;
 
   @override
   void initState() {
@@ -37,7 +38,9 @@ class _WindScreenState extends ConsumerState<WindScreen> {
       final windService = ref.read(windServiceProvider);
       await windService.connect();
 
+      // ✅ ONLY ADD THIS:
       setState(() {
+        _windDataStream = windService.dataStream;
         _isLoading = false;
       });
     } catch (e) {
@@ -50,8 +53,6 @@ class _WindScreenState extends ConsumerState<WindScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final windData = ref.watch(windProvider);
-
     if (_isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -64,11 +65,24 @@ class _WindScreenState extends ConsumerState<WindScreen> {
       );
     }
 
+    // ✅ DIRECT STREAM LISTEN
     return Scaffold(
       appBar: AppBar(title: const Text("Wind Sensor")),
-      body: Center(  // SAFE FIX: keep state wiring stable
-        child: windData.when(
-          data: (data) => Column(
+      body: StreamBuilder<WindData>(
+        stream: _windDataStream,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text("Error: ${snapshot.error}"));
+          }
+          if (!snapshot.hasData) {
+            return const Center(child: Text("No data yet"));
+          }
+
+          final data = snapshot.data!;
+          return Column(
             children: [
               Expanded(
                 child: Center(
@@ -87,10 +101,8 @@ class _WindScreenState extends ConsumerState<WindScreen> {
                 ),
               ),
             ],
-          ),
-          loading: () => const CircularProgressIndicator(),
-          error: (e, _) => Text("Error: $e"),
-        ),
+          );
+        },
       ),
     );
   }
